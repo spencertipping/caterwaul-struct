@@ -1618,37 +1618,37 @@ In order to remain portable, this library uses arrays of bytes as an intermediat
 caterwaul.module('struct', 'js_all', function ($) {
   $.struct = "this instanceof $.struct ? this -se [it.fields = [], it.field_names = []] : new $.struct()".qf /-$.merge/ statics -se- it.prototype /-$.merge/ methods,
 
-  where [isomorphism(f, fi, s) = capture [encode = f, decode = fi, size() = s],
-         integer(w, s, b)      = isomorphism(encode, decode, w >>> 3) -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
-                                                                              encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
-                                                                              decode(v, offset) = offsets /[0][x0 + (v[xi + offset] << x)] /seq],
+  where [isomorphism(f, fi, s)            = capture [encode = f, decode = fi, size() = s],
+         integer(w, s, b)                 = isomorphism(encode, decode, w >>> 3) -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
+                                                                                         encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
+                                                                                         decode(v, offset) = offsets /[0][x0 + (v[xi + offset] << x)] /seq],
 
-         int_conversions       = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
-         string_conversions    = capture [ascii(n) = isomorphism(encode, decode, n) -where [indexes      = n[n] -seq,
-                                                                                            encode(s)    = indexes *[s.charCodeAt(x) & 0xff] -seq,
-                                                                                            decode(v, o) = indexes *[String.fromCharCode(v[o + x])] -seq -re- it.join('')]],
-         all_conversions       = {} / int_conversions /-$.merge/ string_conversions,
+         int_conversions                  = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
+         string_conversions               = capture [ascii(n) = isomorphism(encode, decode, n) -where [indexes      = n[n] -seq,
+                                                                                                       encode(s)    = indexes *[s.charCodeAt(x) & 0xff] -seq,
+                                                                                                       decode(v, o) = indexes *[String.fromCharCode(v[o + x])] -seq -re- it.join('')]],
+         all_conversions                  = {} / int_conversions /-$.merge/ string_conversions,
 
-         array(f, n)           = isomorphism(encode, decode, n * size) -where [indexes       = n[n] -seq,
-                                                                               size          = f.size(),
-                                                                               encode(xs)    = indexes *~!i[f.encode(xs[i])] -seq,
-                                                                               decode(xs, o) = indexes   *i[f.decode(xs, o + xi * size)] -seq],
+         array(f, n)                      = isomorphism(encode, decode, n * size) -where [indexes                     = n[n] -seq,
+                                                                                          size                        = f.size(),
+                                                                                          encode(xs)                  = indexes *~!i[f.encode(xs[i])] -seq,
+                                                                                          decode(xs, o, o || (o = 0)) = indexes   *i[f.decode(xs, o + i * size)] -seq],
 
-         appender(f)(names, n) = (f.constructor === Function ? append : append(names, n))
-                                 -where [t                      = this,
-                                         append(xs = arguments) = names.split(/\s+/) *![t.push(x, n ? array(f_prime, n) : f_prime)] -seq -then- t -where [f_prime = f.apply(t, xs)]],
+         appender(f, t)                   = f.constructor === Function ? curried_appender(f, t) : regular_appender(f, t),
+         curried_appender(f, t)           = given [names, n] in "appender(f.apply(this, arguments), t)(names, n)".qf -where [t = this],
+         regular_appender(f, t)(names, n) = names.split(/\s+/) *![(t || this).push(x, n ? array(f, n) : f)] -seq -then- t /or [this],
 
-         conversion_methods    = all_conversions %v*appender -seq,
+         conversion_methods               = all_conversions %v*appender -seq,
 
-         statics               = capture [isomorphism = isomorphism, array = array],
+         statics                          = capture [isomorphism = isomorphism, array = array],
 
-         methods               = capture [size()            = this.fields /[0][x0 + x.size()] -seq,
-                                          offset_of(name)   = this.fields /[0][this.field_names[xi] === name ? raise [x0] : x0 + x.size()] -seq -rescue- +e,
-                                          push(name, field) = this.fields /~push/ field -then- this.field_names /~push/ name -then- this,
+         methods                          = capture [size()                     = this.fields /[0][x0 + x.size()] -seq,
+                                                     offset_of(name)            = this.fields /[0][this.field_names[xi] === name ? raise [x0] : x0 + x.size()] -seq -rescue- +e,
+                                                     push(name, field)          = this.fields /~push/ field -then- this.field_names /~push/ name -then- this,
 
-                                          encode(v)         = this.field_names *~![this.fields[xi].encode(v[x])] -seq,
-                                          decode(v, o)      = this.fields *[[this.field_names[xi], x.decode(v, o)] -se [o += x.size()]] /object -seq]
-                                 /-$.merge/ conversion_methods]});
+                                                     encode(v)                  = this.field_names *~![this.fields[xi].encode(v[x])] -seq,
+                                                     decode(v, o, o || (o = 0)) = this.fields *[[this.field_names[xi], x.decode(v, o)] -se [o += x.size()]] /object -seq]
+                                            /-$.merge/ conversion_methods]});
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
