@@ -1635,6 +1635,7 @@ caterwaul.module('struct', 'js_all', function ($) {
          conversions           = int_conversions %v*appender -seq,
 
          methods               = capture [size()            = this.fields /[0][x0 + x.size()] -seq,
+                                          offset_of(name)   = this.fields /[0][this.field_names[xi] === name ? raise [x0] : x0 + x.size()] -seq -rescue- +e,
                                           push(name, field) = this.fields /~push/ field -then- this.field_names /~push/ name -then- this,
 
                                           encode(v)         = this.field_names *~![this.fields[xi].encode(v[x])] -seq,
