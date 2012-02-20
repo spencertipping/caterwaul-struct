@@ -1,0 +1,3 @@
+C-structure binary compatibility for Caterwaul.
+Provides bidirectional conversion between node.js Buffer objects and Javascript
+objects using type-erased structure definitions.
