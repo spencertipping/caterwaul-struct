@@ -1619,22 +1619,27 @@ In order to remain portable, this library uses arrays of bytes as an intermediat
 caterwaul.module('struct', 'js_all', function ($) {
   $.struct = "this instanceof $.struct ? this -se [it.fields = [], it.field_names = []] : new $.struct()".qf -se- it.prototype /-$.merge/ methods,
 
-  where [isomorphism(f, fi) = {encode: f, decode: fi},
-         integer(w, s, b)   = isomorphism(encode, decode) -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
-                                                                  encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
-                                                                  decode(x, offset) = offsets /[0][x0 + (_[xi + offset] << x)] /seq -se [it.size() = w >> 3]],
+  where [isomorphism(f, fi, s) = capture [encode = f, decode = fi, size() = s],
+         integer(w, s, b)      = isomorphism(encode, decode, w >>> 3) -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
+                                                                              encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
+                                                                              decode(x, offset) = offsets /[0][x0 + (_[xi + offset] << x)] /seq],
 
-         int_conversions    = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
+         int_conversions       = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
 
-         appender(f)(names) = names.split(/\s+/) *![this.push(x, f)] -seq -then- this,
-         conversions        = int_conversions %v*appender -seq,
+         array(f, n)           = isomorphism(encode, decode, n * size) -where [indexes       = n[n] -seq,
+                                                                               size          = f.size(),
+                                                                               encode(xs)    = indexes *~!i[f.encode(xs[i])] -seq,
+                                                                               decode(xs, o) = indexes   *i[f.decode(xs, o + offset) -se [offset += size]] -seq -where [offset = 0]],
 
-         methods            = capture [size()            = this.fields /[0][x0 + x.size()] -seq,
-                                       push(name, field) = this.fields /~push/ field -then- this.field_names /~push/ name -then- this,
+         appender(f)(names, n) = names.split(/\s+/) *![this.push(x, n ? array(f, n) : f)] -seq -then- this,
+         conversions           = int_conversions %v*appender -seq,
 
-                                       encode(v)         = this.field_names *~![this.fields[xi].encode(v[x])] -seq,
-                                       decode(xs, o)     = this.field_names *[[x, this.fields[xi].decode(v[x], offset)] -se [offset += this.fields[xi].size()]] -seq -where [offset = 0]]
-                              /-$.merge/ conversions]});
+         methods               = capture [size()            = this.fields /[0][x0 + x.size()] -seq,
+                                          push(name, field) = this.fields /~push/ field -then- this.field_names /~push/ name -then- this,
+
+                                          encode(v)         = this.field_names *~![this.fields[xi].encode(v[x])] -seq,
+                                          decode(xs, o)     = this.field_names *[[x, this.fields[xi].decode(v[x], offset)] -se [offset += this.fields[xi].size()]] -seq -where [offset = 0]]
+                                 /-$.merge/ conversions]});
 
 __
 meta::template('comment', '\'\';     # A mechanism for line or block comments.');
