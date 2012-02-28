@@ -617,6 +617,7 @@ my $pattern = join '|', @_;
 __
 meta::function('reload', 'around_hook(\'reload\', sub {execute($_) for grep ! /^bootstrap::/, keys %data});');
 meta::function('render', <<'__');
+file::write('struct.waul.sdoc', retrieve('sdoc::waul::struct'));
 waul('struct');
 
 __
