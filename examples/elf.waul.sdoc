@@ -1,0 +1,26 @@
+Executable and Linkable Format structure definitions | Spencer Tipping
+Licensed under the terms of the MIT source code license
+
+Introduction.
+This file implements the structures necessary to read or generate ELF files. To read one, load the file data into a node.js Buffer object and use $.elf.decode, like this:
+
+| var data   = require('fs').readFileSync('some-elf-file');
+  var parsed = $.elf.decode(data);
+
+caterwaul.module('struct.elf', 'js_all', function ($) {
+
+Structure definitions.
+These are all taken from 'man 5 elf' on Arch Linux, which very helpfully provides a listing of each C struct along with an explanation of its field values. These structures are modeled exactly
+after those, even when an alternative representation would be more convenient to work with from Javascript.
+
+  $.elf = $.struct().u8('ident', 16).u16l('type machine').u32l('version').u64l('entry_point ph_offset sh_offset').u32l('flags').
+                   u16l('header_size ph_entry_size ph_entry_count sh_entry_size sh_entry_count sh_string_table_index') /-$.merge/ methods()
+
+  -where [methods() = capture [],               // TODO
+
+          program_header = $.struct().u32l('type flags').u64l('offset virtual_address physical_address file_size memory_size alignment'),
+          section_header = $.struct().u32l('name type').u64l('flags address offset size').u32l('link info').u64l('address_alignment entry_size'),
+          symbol         = $.struct().u32l('name').u8('info other').u16l('section_header_table_index').u64l('value size'),
+          relocation     = $.struct().u64l('offset info'),
+          relocation_a   = $.struct().u64l('offset info addend'),
+          dynamic        = $.struct().u64l('tag val')]});

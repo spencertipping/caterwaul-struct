@@ -1616,24 +1616,33 @@ terms of their absolute bit width, signedness, and endianness.
 
 In order to remain portable, this library uses arrays of bytes as an intermediate binary representation. These can be aliased onto node.js Buffer objects using typed arrays.
 
+You can access 64-bit fields, but their Javascript representation is an array of two 32-bit ints. This prevents Javascript from using lossy double coercion. (This is misleading; Javascript
+will coerce a 32-bit int to a double without hesitation, but this conversion is lossless from an integer-value perspective.) For this reason their logic is separate from the other integer
+conversions. There is no support for signed 64-bit integers.
+
 caterwaul.module('struct', 'js_all', function ($) {
   $.struct = "this instanceof $.struct ? this -se [it.fields = [], it.field_names = []] : new $.struct()".qf /-$.merge/ statics -se- it.prototype /-$.merge/ methods,
 
   where [isomorphism(f, fi, s)            = capture [encode = f, decode = fi, size() = s],
-         integer(w, s, b)                 = isomorphism(encode, decode, w >>> 3) -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
-                                                                                         encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
-                                                                                         decode(v, offset) = offsets /[0][x0 + (v[xi + offset] << x)] /seq],
-
-         int_conversions                  = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
-         string_conversions               = capture [ascii(n) = isomorphism(encode, decode, n) -where [indexes      = n[n] -seq,
-                                                                                                       encode(s)    = indexes *[s.charCodeAt(x) & 0xff] -seq,
-                                                                                                       decode(v, o) = indexes *[String.fromCharCode(v[o + x])] -seq -re- it.join('')]],
-         all_conversions                  = {} / int_conversions /-$.merge/ string_conversions,
 
          array(f, n)                      = isomorphism(encode, decode, n * size) -where [indexes                     = n[n] -seq,
                                                                                           size                        = f.size(),
                                                                                           encode(xs)                  = indexes *~!i[f.encode(xs[i])] -seq,
                                                                                           decode(xs, o, o || (o = 0)) = indexes   *i[f.decode(xs, o + i * size)] -seq],
+         long_integer(w, b)               = array(integer(32, false, b), w >>> 5),
+         integer(w, s, b)                 = isomorphism(encode, decode, w >>> 3)  -where [offsets           = b ? ni[w - 8, 0, -8] -seq : n[0, w, 8] -seq,
+                                                                                          encode            = s ? "offsets *[_ >> x & 0xff] -seq".qf : "offsets *[_ >>> x & 0xff] -seq".qf,
+                                                                                          decode(v, offset) = offsets /[0][x0 + (v[xi + offset] << x)] /seq],
+
+         int_conversions                  = 'u8 s8 u16l s16l u16b s16b u32l s32l u32b s32b'.qw *[[x, integer(+x.substr(1, 2), x.charAt(0) === 's', x.charAt(3) === 'b')]] -object -seq,
+         long_int_conversions             = 'u64l u64b'.qw *[[x, long_integer(+x.substr(1, 2), x.charAt(3) === 'b')]] -object -seq,
+
+         string_conversions               = capture [ascii(n) = isomorphism(encode, decode, n) -where [indexes      = n[n] -seq,
+                                                                                                       encode(s)    = indexes *[s.charCodeAt(x) & 0xff] -seq,
+                                                                                                       decode(v, o) = indexes *[String.fromCharCode(v[o + x])] -seq -re- it.join('')]],
+         struct_conversions               = capture [struct(s) = s],
+
+         all_conversions                  = {} / int_conversions / long_int_conversions / string_conversions /-$.merge/ struct_conversions,
 
          appender(f, t)                   = f.constructor === Function ? curried_appender(f, t) : regular_appender(f, t),
          curried_appender(f, t)           = given [names, n] in "appender(f.apply(this, arguments), t)(names, n)".qf -where [t = this],
