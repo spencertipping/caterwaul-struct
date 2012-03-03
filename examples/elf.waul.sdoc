@@ -16,7 +16,7 @@ after those, even when an alternative representation would be more convenient to
   $.elf = $.struct().u8('ident', 16).u16l('type machine').u32l('version').u64l('entry_point ph_offset sh_offset').u32l('flags').
                    u16l('header_size ph_entry_size ph_entry_count sh_entry_size sh_entry_count sh_string_table_index') /-$.merge/ methods()
 
-  -where [methods() = capture [],               // TODO
+  -where [methods() = {},               // TODO
 
           program_header = $.struct().u32l('type flags').u64l('offset virtual_address physical_address file_size memory_size alignment'),
           section_header = $.struct().u32l('name type').u64l('flags address offset size').u32l('link info').u64l('address_alignment entry_size'),
